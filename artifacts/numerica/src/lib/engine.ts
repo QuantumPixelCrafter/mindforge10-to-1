@@ -48,6 +48,24 @@ export function canSolve(digits: number[], target: number): boolean {
   return canSolveRec(digits, target);
 }
 
+/**
+ * Returns true if ANY non-empty subset of `digits` can be combined
+ * (using all members of that subset) to reach `target`.
+ * Used for Freestyle mode where not all digits need to be used.
+ */
+export function canSolveAny(digits: number[], target: number): boolean {
+  const n = digits.length;
+  for (let mask = 1; mask < (1 << n); mask++) {
+    const subset = digits.filter((_, i) => mask & (1 << i));
+    if (subset.length === 1) {
+      if (Math.abs(subset[0] - target) < 0.001) return true;
+    } else {
+      if (canSolveRec(subset, target)) return true;
+    }
+  }
+  return false;
+}
+
 export function generateDigits(count: number, allowNegative: boolean): number[] {
   const digits: number[] = [];
   for (let i = 0; i < count; i++) {
@@ -60,6 +78,46 @@ export function generateDigits(count: number, allowNegative: boolean): number[] 
 
 export function generateTarget(min = 10, max = 50): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+/**
+ * Generates random digits where at least one subset can reach the target.
+ * Used for Freestyle mode — digits don't all need to be used.
+ */
+export function generateFreestylePuzzle(
+  count: number,
+  target: number,
+  maxAttempts = 1000
+): number[] {
+  for (let i = 0; i < maxAttempts; i++) {
+    const digits = generateDigits(count, false);
+    if (canSolveAny(digits, target)) return digits;
+  }
+  // Constructive fallback: find 2-3 digits that solve the target, pad with randoms
+  for (let a = 1; a <= 9; a++) {
+    for (let b = 1; b <= 9; b++) {
+      if (canSolveRec([a, b], target)) {
+        const pad = Array.from({ length: Math.max(0, count - 2) }, () => Math.floor(Math.random() * 9) + 1);
+        return shuffle([a, b, ...pad]);
+      }
+      for (let c = 1; c <= 9; c++) {
+        if (canSolveRec([a, b, c], target)) {
+          const pad = Array.from({ length: Math.max(0, count - 3) }, () => Math.floor(Math.random() * 9) + 1);
+          return shuffle([a, b, c, ...pad]);
+        }
+      }
+    }
+  }
+  return generateDigits(count, false);
+}
+
+function shuffle<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }
 
 /**

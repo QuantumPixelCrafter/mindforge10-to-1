@@ -17,8 +17,6 @@ interface GameState {
     digitCount: number;
     timeMode: string;
     modes: string[];
-    allowNegative: boolean;
-    allowFractions: boolean;
     customTarget: number;
   };
   
@@ -40,8 +38,6 @@ export const useGameStore = create<GameState>()(
         digitCount: 4,
         timeMode: '60s',
         modes: ['Classic'],
-        allowNegative: false,
-        allowFractions: false,
         customTarget: 24,
       },
       

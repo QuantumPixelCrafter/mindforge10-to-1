@@ -7,34 +7,29 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
-const GAME_MODES = ['Classic', 'Closest Wins', 'Random Numbers'];
+const GAME_MODES = [
+  { id: 'Classic',        desc: 'Hit a fixed target using all your digits' },
+  { id: 'Freestyle',      desc: 'Hit any target — use as few digits as you like' },
+  { id: 'Random Numbers', desc: 'No solvability guarantee — pure improvisation' },
+];
 
 export default function Home() {
   const [_, setLocation] = useLocation();
   const { settings, updateSettings, highScore } = useGameStore();
 
-  const handlePlay = () => {
-    setLocation("/game");
-  };
+  const handlePlay = () => setLocation("/game");
 
   const toggleMode = (mode: string) => {
     if (mode === 'Classic') {
-      // Classic is mutually exclusive — selecting it clears other modes
-      if (settings.modes.includes('Classic')) return; // already on, do nothing (must stay on)
+      if (settings.modes.includes('Classic')) return;
       updateSettings({ modes: ['Classic'] });
     } else {
-      // Selecting a non-Classic mode removes Classic
       const withoutClassic = settings.modes.filter(m => m !== 'Classic');
       const already = withoutClassic.includes(mode);
       const modes = already
         ? withoutClassic.filter(m => m !== mode)
         : [...withoutClassic, mode];
-      // Fall back to Classic if nothing selected
-      if (modes.length === 0) {
-        updateSettings({ modes: ['Classic'] });
-      } else {
-        updateSettings({ modes });
-      }
+      updateSettings({ modes: modes.length === 0 ? ['Classic'] : modes });
     }
   };
 
@@ -52,6 +47,7 @@ export default function Home() {
 
         <Card className="bg-gray-900 border-cyan-900 border-2 p-6 space-y-6 text-white shadow-[0_0_30px_rgba(34,211,238,0.1)]">
 
+          {/* Digit Count */}
           <div className="space-y-3">
             <Label className="text-cyan-400 font-bold uppercase tracking-widest text-sm">Digit Count</Label>
             <RadioGroup
@@ -68,6 +64,7 @@ export default function Home() {
             </RadioGroup>
           </div>
 
+          {/* Time Mode */}
           <div className="space-y-3">
             <Label className="text-cyan-400 font-bold uppercase tracking-widest text-sm">Time Mode</Label>
             <RadioGroup
@@ -84,6 +81,7 @@ export default function Home() {
             </RadioGroup>
           </div>
 
+          {/* Game Modes */}
           <div className="space-y-3">
             <Label className="text-cyan-400 font-bold uppercase tracking-widest text-sm">
               Game Modes
@@ -91,40 +89,42 @@ export default function Home() {
                 (Classic cannot be combined)
               </span>
             </Label>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-              {GAME_MODES.map((mode) => {
-                const checked = settings.modes.includes(mode);
-                const disabled = !checked && isClassic && mode !== 'Classic';
+            <div className="space-y-2">
+              {GAME_MODES.map(({ id, desc }) => {
+                const checked = settings.modes.includes(id);
+                const disabled = !checked && isClassic && id !== 'Classic';
                 return (
                   <div
-                    key={mode}
-                    className={`flex items-center space-x-2 p-2 rounded border transition-colors cursor-pointer
+                    key={id}
+                    onClick={() => !disabled && toggleMode(id)}
+                    className={`flex items-start gap-3 p-3 rounded border transition-colors cursor-pointer
                       ${checked
                         ? 'bg-cyan-950 border-cyan-500'
                         : disabled
                         ? 'bg-gray-900 border-gray-800 opacity-40 cursor-not-allowed'
                         : 'bg-gray-800 border-gray-700 hover:border-cyan-500'
                       }`}
-                    onClick={() => !disabled && toggleMode(mode)}
                   >
                     <Checkbox
-                      id={`m-${mode}`}
+                      id={`m-${id}`}
                       checked={checked}
-                      onCheckedChange={() => !disabled && toggleMode(mode)}
+                      onCheckedChange={() => !disabled && toggleMode(id)}
                       disabled={disabled}
+                      className="mt-0.5 shrink-0"
                     />
-                    <Label
-                      htmlFor={`m-${mode}`}
-                      className={`cursor-pointer ${disabled ? 'cursor-not-allowed' : ''}`}
-                    >
-                      {mode}
-                    </Label>
+                    <div>
+                      <Label htmlFor={`m-${id}`} className={`font-bold cursor-pointer ${disabled ? 'cursor-not-allowed' : ''}`}>
+                        {id}
+                      </Label>
+                      <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
+                    </div>
                   </div>
                 );
               })}
             </div>
           </div>
 
+          {/* Custom Target — Classic only */}
           {isClassic && (
             <div className="space-y-3">
               <Label className="text-cyan-400 font-bold uppercase tracking-widest text-sm">
@@ -143,28 +143,6 @@ export default function Home() {
               />
             </div>
           )}
-
-          <div className="space-y-3">
-            <Label className="text-cyan-400 font-bold uppercase tracking-widest text-sm">Optional Rules</Label>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center space-x-2 bg-gray-800 p-2 rounded border border-gray-700 hover:border-cyan-500 transition-colors">
-                <Checkbox
-                  id="opt-neg"
-                  checked={settings.allowNegative}
-                  onCheckedChange={(v) => updateSettings({ allowNegative: !!v })}
-                />
-                <Label htmlFor="opt-neg" className="cursor-pointer">Negative Numbers</Label>
-              </div>
-              <div className="flex items-center space-x-2 bg-gray-800 p-2 rounded border border-gray-700 hover:border-cyan-500 transition-colors">
-                <Checkbox
-                  id="opt-frac"
-                  checked={settings.allowFractions}
-                  onCheckedChange={(v) => updateSettings({ allowFractions: !!v })}
-                />
-                <Label htmlFor="opt-frac" className="cursor-pointer">Fractions</Label>
-              </div>
-            </div>
-          </div>
 
           <Button
             onClick={handlePlay}

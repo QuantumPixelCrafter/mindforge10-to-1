@@ -5,6 +5,7 @@ import { useGameStore } from "@/lib/store";
 import { useSessionStore } from "@/lib/sessionStore";
 import {
   generateSolvablePuzzle,
+  generateFreestylePuzzle,
   generateDigits,
   generateTarget,
   evaluateTokens,
@@ -29,23 +30,28 @@ export default function Game() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const successRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const isClosest = settings.modes.includes("Closest Wins");
+  const isFreestyle   = settings.modes.includes("Freestyle");
+  const isRandom      = settings.modes.includes("Random Numbers");
   const isPlayTilDead = settings.timeMode === "Play 'til Dead";
-  const totalTime = TIME_MAP[settings.timeMode] ?? 60;
+  const totalTime     = TIME_MAP[settings.timeMode] ?? 60;
 
   const loadPuzzle = useCallback(() => {
     const target = settings.modes.includes("Classic")
       ? settings.customTarget
       : generateTarget();
+
     let digits: number[];
-    if (settings.modes.includes("Random Numbers")) {
-      digits = generateDigits(settings.digitCount, settings.allowNegative);
+    if (isRandom) {
+      digits = generateDigits(settings.digitCount, false);
+    } else if (isFreestyle) {
+      digits = generateFreestylePuzzle(settings.digitCount, target);
     } else {
-      digits = generateSolvablePuzzle(settings.digitCount, target, settings.allowNegative);
+      digits = generateSolvablePuzzle(settings.digitCount, target, false);
     }
+
     session.setDigits(digits, target);
     session.setLastResult(null);
-  }, [settings]);
+  }, [settings, isFreestyle, isRandom]);
 
   useEffect(() => {
     session.reset();
@@ -82,37 +88,31 @@ export default function Game() {
   }, [session.finished]);
 
   const handleSubmit = () => {
-    const { tokens, target, timeLeft, puzzlesSolved } = session;
+    const { tokens, target, timeLeft } = session;
     if (tokens.length < 1) { session.setError("Build an expression first"); return; }
 
     const { result, error } = evaluateTokens(tokens);
-
     if (error || result === null) { session.setError(error ?? "Invalid expression"); return; }
 
     const exact = Math.abs(result - target) < 0.001;
-    const distance = Math.abs(result - target);
     const opsUsed = tokens.filter(t => t.type === 'op').length;
-    const pts = calculateScore({ exact, distance, timeLeft, totalTime, opsUsed });
+    const pts = calculateScore({ exact, distance: Math.abs(result - target), timeLeft, totalTime, opsUsed });
 
-    if (isPlayTilDead && !exact && !isClosest) {
-      session.setLastResult({ correct: false, points: 0 });
-      session.setError(`Wrong! Got ${result}, needed ${target}.`);
-      successRef.current = setTimeout(() => {
-        session.setFinished(true);
-      }, 1200);
+    if (!exact) {
+      if (isPlayTilDead) {
+        session.setLastResult({ correct: false, points: 0 });
+        session.setError(`Wrong! Got ${result}, needed ${target}.`);
+        successRef.current = setTimeout(() => session.setFinished(true), 1200);
+      } else {
+        session.setError(`Got ${result}, target is ${target}. Try again!`);
+      }
       return;
     }
 
-    if (exact || isClosest) {
-      session.addScore(pts);
-      session.incrementPuzzles();
-      session.setLastResult({ correct: exact, points: pts });
-      successRef.current = setTimeout(() => {
-        loadPuzzle();
-      }, 900);
-    } else {
-      session.setError(`Got ${result}, target is ${target}. Try again!`);
-    }
+    session.addScore(pts);
+    session.incrementPuzzles();
+    session.setLastResult({ correct: true, points: pts });
+    successRef.current = setTimeout(() => loadPuzzle(), 900);
   };
 
   const ops = unlockedOps ? [...DEFAULT_OPS, ...ADVANCED_OPS] : DEFAULT_OPS;
@@ -133,20 +133,19 @@ export default function Game() {
     <div className="min-h-screen bg-[#080c14] text-white flex flex-col items-center justify-between p-4 font-mono select-none">
       {/* Header */}
       <div className="w-full max-w-xl flex justify-between items-center pt-2">
-        <button onClick={() => { session.setFinished(true); }} className="text-gray-500 hover:text-cyan-400 transition-colors text-sm uppercase tracking-widest">
+        <button onClick={() => session.setFinished(true)} className="text-gray-500 hover:text-cyan-400 transition-colors text-sm uppercase tracking-widest">
           Quit
         </button>
         <motion.div
           animate={isLow ? { scale: [1, 1.05, 1] } : {}}
           transition={{ repeat: Infinity, duration: 0.8 }}
           className={`text-3xl font-bold tabular-nums ${isLow ? 'text-red-400' : 'text-cyan-400'}`}
-          data-testid="timer-display"
         >
           {formatTime(session.timeLeft)}
         </motion.div>
         <div className="text-right">
           <div className="text-xs text-gray-500 uppercase tracking-widest">Score</div>
-          <div className="text-xl font-bold text-cyan-400" data-testid="score-display">{session.score}</div>
+          <div className="text-xl font-bold text-cyan-400">{session.score}</div>
         </div>
       </div>
 
@@ -158,7 +157,6 @@ export default function Game() {
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           className="text-7xl font-black text-white drop-shadow-[0_0_20px_rgba(34,211,238,0.4)]"
-          data-testid="target-display"
         >
           {session.target}
         </motion.div>
@@ -172,9 +170,9 @@ export default function Game() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
-            className={`text-center py-1 font-bold text-lg ${session.lastResult.correct ? 'text-emerald-400' : 'text-amber-400'}`}
+            className="text-center py-1 font-bold text-lg text-emerald-400"
           >
-            {session.lastResult.correct ? `+${session.lastResult.points} pts` : `Closest: +${session.lastResult.points} pts`}
+            +{session.lastResult.points} pts
           </motion.div>
         )}
         {session.error && !session.lastResult && (
@@ -197,7 +195,6 @@ export default function Game() {
           return (
             <motion.button
               key={i}
-              data-testid={`digit-tile-${i}`}
               whileHover={!used ? { scale: 1.08 } : {}}
               whileTap={!used ? { scale: 0.95 } : {}}
               initial={{ opacity: 0, y: 20 }}
@@ -216,6 +213,13 @@ export default function Game() {
         })}
       </div>
 
+      {/* Freestyle hint */}
+      {isFreestyle && (
+        <p className="text-xs text-indigo-400 tracking-wider mb-1">
+          You don't need to use all digits
+        </p>
+      )}
+
       {/* Expression Display */}
       <div className="w-full max-w-xl bg-gray-900/60 border border-gray-700 rounded-xl px-4 py-3 text-center min-h-[52px] text-xl font-mono tracking-wider text-white my-2">
         {expressionStr || <span className="text-gray-600">Click digits and operators...</span>}
@@ -223,7 +227,6 @@ export default function Game() {
 
       {/* Operators + Brackets */}
       <div className="flex flex-wrap gap-2 justify-center my-2">
-        {/* Bracket buttons */}
         {(['(', ')'] as const).map((br) => (
           <motion.button
             key={br}
@@ -235,12 +238,9 @@ export default function Game() {
             {br}
           </motion.button>
         ))}
-
-        {/* Operator buttons */}
         {ops.map((op) => (
           <motion.button
             key={op}
-            data-testid={`op-${op}`}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.92 }}
             onClick={() => session.addOp(op)}
@@ -254,14 +254,12 @@ export default function Game() {
       {/* Actions */}
       <div className="flex gap-3 w-full max-w-xl mt-2 mb-4">
         <button
-          data-testid="button-clear"
           onClick={() => session.clearExpression()}
           className="flex-1 py-3 rounded-xl bg-gray-800 border border-gray-700 text-gray-400 hover:border-gray-500 hover:text-white transition-colors font-bold uppercase tracking-wider text-sm"
         >
           Clear
         </button>
         <motion.button
-          data-testid="button-submit"
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.97 }}
           onClick={handleSubmit}
