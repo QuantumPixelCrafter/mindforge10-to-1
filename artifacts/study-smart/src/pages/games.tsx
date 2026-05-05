@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useGenerateRevisionCards, useSubmitScore } from "@workspace/api-client-react";
 import { useAuth } from "@workspace/replit-auth-web";
 import { useLanguage } from "@/lib/language-context";
-import { Brain, Gamepad2, Sparkles, Trophy, Timer, RefreshCw, Play, RotateCcw, Leaf, Star, Upload } from "lucide-react";
+import { Brain, Gamepad2, Sparkles, Trophy, Timer, RefreshCw, Play, RotateCcw, Leaf, Star, Upload, Hash } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -639,8 +639,20 @@ function BubblePop() {
   );
 }
 
+// ─── Numerica Iframe ──────────────────────────────────────────────────
+function NumericaEmbed() {
+  return (
+    <iframe
+      src="/numerica/"
+      className="w-full h-full rounded-2xl border-0"
+      title="Numerica"
+      allow="same-origin"
+    />
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────
-type Game = "memory" | "bubbles" | null;
+type Game = "memory" | "bubbles" | "numerica" | null;
 
 export default function GamesPage() {
   const [activeGame, setActiveGame] = useState<Game>(null);
@@ -710,6 +722,37 @@ export default function GamesPage() {
                 </Button>
               </div>
             </motion.div>
+
+            {/* Numerica Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+              className="bg-card rounded-3xl border border-border/60 shadow-sm overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer group sm:col-span-2"
+              onClick={() => setActiveGame("numerica")}
+            >
+              <div className="h-3 bg-gradient-to-r from-cyan-400 to-indigo-500" />
+              <div className="p-6 sm:flex sm:items-center sm:gap-6">
+                <div className="w-14 h-14 bg-gradient-to-br from-cyan-400/20 to-indigo-500/20 rounded-2xl flex items-center justify-center mb-5 sm:mb-0 sm:shrink-0 group-hover:scale-110 transition-transform">
+                  <Hash className="w-7 h-7 text-cyan-500" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-xl font-bold">{t.games.numerica}</h3>
+                    <span className="text-[10px] font-bold uppercase tracking-wider bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 px-2 py-0.5 rounded-full">{t.games.numericaBadge}</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
+                    {t.games.numericaPageDesc}
+                  </p>
+                  <div className="flex flex-wrap gap-2 mb-5 text-xs">
+                    {t.games.numericaTags.map((tag: string) => (
+                      <span key={tag} className="bg-muted px-2.5 py-1 rounded-full">{tag}</span>
+                    ))}
+                  </div>
+                  <Button className="w-full sm:w-auto rounded-2xl bg-gradient-to-r from-cyan-500 to-indigo-500 hover:opacity-90 border-0 shadow-lg shadow-cyan-500/15 group-hover:shadow-cyan-500/25 transition-all px-8">
+                    <Play className="w-4 h-4 mr-2" /> {t.games.playNow}
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
           </div>
         </div>
       ) : (
@@ -719,15 +762,17 @@ export default function GamesPage() {
               <Gamepad2 className="w-4 h-4" /> {t.games.allGames}
             </Button>
             <span className="text-muted-foreground/40">/</span>
-            <span className="font-semibold">{activeGame === "memory" ? t.games.memoryMatch : t.games.bubblePop}</span>
+            <span className="font-semibold">
+              {activeGame === "memory" ? t.games.memoryMatch : activeGame === "bubbles" ? t.games.bubblePop : t.games.numerica}
+            </span>
             {activeGame === "memory" && (
               <span className="ml-1 text-[10px] font-bold uppercase tracking-wider bg-primary/10 text-primary px-2 py-0.5 rounded-full flex items-center gap-1">
                 <Sparkles className="w-2.5 h-2.5" /> AI
               </span>
             )}
           </div>
-          <div className="flex-1 bg-card rounded-3xl border border-border/60 shadow-sm p-4 md:p-6 overflow-hidden flex flex-col">
-            {activeGame === "memory" ? <MemoryMatch /> : <BubblePop />}
+          <div className="flex-1 bg-card rounded-3xl border border-border/60 shadow-sm overflow-hidden flex flex-col" style={activeGame === "numerica" ? { padding: 0 } : { padding: "1rem" }}>
+            {activeGame === "memory" ? <MemoryMatch /> : activeGame === "bubbles" ? <BubblePop /> : <NumericaEmbed />}
           </div>
         </div>
       )}
