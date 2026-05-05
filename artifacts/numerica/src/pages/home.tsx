@@ -21,14 +21,16 @@ export default function Home() {
 
   const toggleMode = (mode: string) => {
     if (mode === 'Classic') {
-      if (settings.modes.includes('Classic')) return;
+      // Clicking Classic always switches to Classic-only
       updateSettings({ modes: ['Classic'] });
     } else {
-      const withoutClassic = settings.modes.filter(m => m !== 'Classic');
-      const already = withoutClassic.includes(mode);
+      // If Classic is active, switch to the clicked mode (deselect Classic)
+      // Otherwise toggle the mode in/out of the active set
+      const current = settings.modes.includes('Classic') ? [] : settings.modes;
+      const already = current.includes(mode);
       const modes = already
-        ? withoutClassic.filter(m => m !== mode)
-        : [...withoutClassic, mode];
+        ? current.filter(m => m !== mode)
+        : [...current, mode];
       updateSettings({ modes: modes.length === 0 ? ['Classic'] : modes });
     }
   };
@@ -83,39 +85,28 @@ export default function Home() {
 
           {/* Game Modes */}
           <div className="space-y-3">
-            <Label className="text-cyan-400 font-bold uppercase tracking-widest text-sm">
-              Game Modes
-              <span className="ml-2 text-gray-500 font-normal normal-case tracking-normal text-xs">
-                (Classic cannot be combined)
-              </span>
-            </Label>
+            <Label className="text-cyan-400 font-bold uppercase tracking-widest text-sm">Game Modes</Label>
             <div className="space-y-2">
               {GAME_MODES.map(({ id, desc }) => {
                 const checked = settings.modes.includes(id);
-                const disabled = !checked && isClassic && id !== 'Classic';
                 return (
                   <div
                     key={id}
-                    onClick={() => !disabled && toggleMode(id)}
+                    onClick={() => toggleMode(id)}
                     className={`flex items-start gap-3 p-3 rounded border transition-colors cursor-pointer
                       ${checked
                         ? 'bg-cyan-950 border-cyan-500'
-                        : disabled
-                        ? 'bg-gray-900 border-gray-800 opacity-40 cursor-not-allowed'
                         : 'bg-gray-800 border-gray-700 hover:border-cyan-500'
                       }`}
                   >
                     <Checkbox
                       id={`m-${id}`}
                       checked={checked}
-                      onCheckedChange={() => !disabled && toggleMode(id)}
-                      disabled={disabled}
+                      onCheckedChange={() => toggleMode(id)}
                       className="mt-0.5 shrink-0"
                     />
                     <div>
-                      <Label htmlFor={`m-${id}`} className={`font-bold cursor-pointer ${disabled ? 'cursor-not-allowed' : ''}`}>
-                        {id}
-                      </Label>
+                      <Label htmlFor={`m-${id}`} className="font-bold cursor-pointer">{id}</Label>
                       <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
                     </div>
                   </div>
