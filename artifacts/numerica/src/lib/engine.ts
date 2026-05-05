@@ -1,4 +1,9 @@
-export type Operator = '+' | '-' | '×' | '÷' | '^' | 'mod' | '!';
+export type Operator = '+' | '-' | '×' | '÷' | '^' | 'mod';
+
+export type ExprToken =
+  | { type: 'number'; value: number }
+  | { type: 'op'; value: Operator }
+  | { type: 'bracket'; value: '(' | ')' };
 
 export function applyOp(a: number, b: number, op: Operator): number | null {
   switch (op) {
@@ -10,6 +15,16 @@ export function applyOp(a: number, b: number, op: Operator): number | null {
     case 'mod': return b === 0 ? null : a % b;
     default: return null;
   }
+}
+
+function precedence(op: Operator): number {
+  if (op === '^') return 4;
+  if (op === 'mod' || op === '×' || op === '÷') return 3;
+  return 2;
+}
+
+function isRightAssoc(op: Operator): boolean {
+  return op === '^';
 }
 
 function canSolveRec(nums: number[], target: number): boolean {
@@ -43,7 +58,7 @@ export function generateDigits(count: number, allowNegative: boolean): number[] 
   return digits;
 }
 
-export function generateTarget(min = 10, max = 99): number {
+export function generateTarget(min = 10, max = 50): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
@@ -60,55 +75,60 @@ export function generateSolvablePuzzle(
   return generateDigits(count, allowNegative);
 }
 
-export interface BalanceEquation {
-  lhs: string;
-  rhs: number;
-  missingOp: Operator;
-  candidates: Operator[];
-  operands: [number, number];
-}
-
-export function generateBalanceEquation(digits: number[]): BalanceEquation {
-  const ops: Operator[] = ['+', '-', '×', '÷'];
-  const shuffled = [...digits].sort(() => Math.random() - 0.5);
-  const a = shuffled[0];
-  const b = shuffled[1];
-  const op = ops[Math.floor(Math.random() * ops.length)];
-  const result = applyOp(a, b, op);
-  const rhs = result !== null && Number.isFinite(result) ? result : a + b;
-  return {
-    lhs: `${a} ? ${b}`,
-    rhs: Math.round(rhs * 100) / 100,
-    missingOp: op,
-    candidates: ops,
-    operands: [a, b],
-  };
-}
-
-export type ExprToken = { type: 'number'; value: number } | { type: 'op'; value: Operator };
-
 export function evaluateTokens(tokens: ExprToken[]): { result: number | null; error?: string } {
   if (tokens.length === 0) return { result: null, error: 'Empty expression' };
   if (tokens.length === 1 && tokens[0].type === 'number') return { result: tokens[0].value };
 
-  const nums: number[] = [];
-  const ops: Operator[] = [];
+  const output: number[] = [];
+  const opStack: (Operator | '(')[] = [];
 
-  for (const t of tokens) {
-    if (t.type === 'number') nums.push(t.value);
-    else ops.push(t.value);
+  const applyTop = (): boolean => {
+    const op = opStack.pop() as Operator;
+    const b = output.pop();
+    const a = output.pop();
+    if (a === undefined || b === undefined) return false;
+    const r = applyOp(a, b, op);
+    if (r === null || !Number.isFinite(r)) return false;
+    output.push(r);
+    return true;
+  };
+
+  for (const token of tokens) {
+    if (token.type === 'number') {
+      output.push(token.value);
+    } else if (token.type === 'op') {
+      const op = token.value;
+      while (
+        opStack.length > 0 &&
+        opStack[opStack.length - 1] !== '(' &&
+        (
+          precedence(opStack[opStack.length - 1] as Operator) > precedence(op) ||
+          (precedence(opStack[opStack.length - 1] as Operator) === precedence(op) && !isRightAssoc(op))
+        )
+      ) {
+        if (!applyTop()) return { result: null, error: 'Invalid operation' };
+      }
+      opStack.push(op);
+    } else if (token.type === 'bracket') {
+      if (token.value === '(') {
+        opStack.push('(');
+      } else {
+        while (opStack.length > 0 && opStack[opStack.length - 1] !== '(') {
+          if (!applyTop()) return { result: null, error: 'Invalid operation' };
+        }
+        if (opStack.length === 0) return { result: null, error: 'Mismatched brackets' };
+        opStack.pop();
+      }
+    }
   }
 
-  if (nums.length !== ops.length + 1) return { result: null, error: 'Invalid expression' };
-
-  let result = nums[0];
-  for (let i = 0; i < ops.length; i++) {
-    const r = applyOp(result, nums[i + 1], ops[i]);
-    if (r === null) return { result: null, error: 'Division by zero' };
-    result = r;
+  while (opStack.length > 0) {
+    if (opStack[opStack.length - 1] === '(') return { result: null, error: 'Mismatched brackets' };
+    if (!applyTop()) return { result: null, error: 'Invalid operation' };
   }
 
-  return { result: Math.round(result * 10000) / 10000 };
+  if (output.length !== 1) return { result: null, error: 'Invalid expression' };
+  return { result: Math.round(output[0] * 10000) / 10000 };
 }
 
 export function calculateScore(params: {

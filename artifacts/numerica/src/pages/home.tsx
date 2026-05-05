@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
+const GAME_MODES = ['Classic', 'Closest Wins', 'Random Numbers'];
+
 export default function Home() {
   const [_, setLocation] = useLocation();
   const { settings, updateSettings, highScore } = useGameStore();
@@ -16,12 +18,27 @@ export default function Home() {
   };
 
   const toggleMode = (mode: string) => {
-    const modes = settings.modes.includes(mode)
-      ? settings.modes.filter(m => m !== mode)
-      : [...settings.modes, mode];
-    if (modes.length === 0) modes.push("Classic");
-    updateSettings({ modes });
+    if (mode === 'Classic') {
+      // Classic is mutually exclusive — selecting it clears other modes
+      if (settings.modes.includes('Classic')) return; // already on, do nothing (must stay on)
+      updateSettings({ modes: ['Classic'] });
+    } else {
+      // Selecting a non-Classic mode removes Classic
+      const withoutClassic = settings.modes.filter(m => m !== 'Classic');
+      const already = withoutClassic.includes(mode);
+      const modes = already
+        ? withoutClassic.filter(m => m !== mode)
+        : [...withoutClassic, mode];
+      // Fall back to Classic if nothing selected
+      if (modes.length === 0) {
+        updateSettings({ modes: ['Classic'] });
+      } else {
+        updateSettings({ modes });
+      }
+    }
   };
+
+  const isClassic = settings.modes.includes('Classic');
 
   return (
     <div className="min-h-screen bg-black text-white p-6 flex flex-col items-center justify-center font-mono">
@@ -34,7 +51,7 @@ export default function Home() {
         </div>
 
         <Card className="bg-gray-900 border-cyan-900 border-2 p-6 space-y-6 text-white shadow-[0_0_30px_rgba(34,211,238,0.1)]">
-          
+
           <div className="space-y-3">
             <Label className="text-cyan-400 font-bold uppercase tracking-widest text-sm">Digit Count</Label>
             <RadioGroup
@@ -68,30 +85,61 @@ export default function Home() {
           </div>
 
           <div className="space-y-3">
-            <Label className="text-cyan-400 font-bold uppercase tracking-widest text-sm">Game Modes</Label>
-            <div className="grid grid-cols-2 gap-4">
-              {['Classic', 'Closest Wins', 'Balance the Equation', 'Random Numbers'].map((mode) => (
-                <div key={mode} className="flex items-center space-x-2 bg-gray-800 p-2 rounded border border-gray-700 hover:border-cyan-500 transition-colors">
-                  <Checkbox 
-                    id={`m-${mode}`} 
-                    checked={settings.modes.includes(mode)}
-                    onCheckedChange={() => toggleMode(mode)}
-                  />
-                  <Label htmlFor={`m-${mode}`} className="cursor-pointer">{mode}</Label>
-                </div>
-              ))}
+            <Label className="text-cyan-400 font-bold uppercase tracking-widest text-sm">
+              Game Modes
+              <span className="ml-2 text-gray-500 font-normal normal-case tracking-normal text-xs">
+                (Classic cannot be combined)
+              </span>
+            </Label>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+              {GAME_MODES.map((mode) => {
+                const checked = settings.modes.includes(mode);
+                const disabled = !checked && isClassic && mode !== 'Classic';
+                return (
+                  <div
+                    key={mode}
+                    className={`flex items-center space-x-2 p-2 rounded border transition-colors cursor-pointer
+                      ${checked
+                        ? 'bg-cyan-950 border-cyan-500'
+                        : disabled
+                        ? 'bg-gray-900 border-gray-800 opacity-40 cursor-not-allowed'
+                        : 'bg-gray-800 border-gray-700 hover:border-cyan-500'
+                      }`}
+                    onClick={() => !disabled && toggleMode(mode)}
+                  >
+                    <Checkbox
+                      id={`m-${mode}`}
+                      checked={checked}
+                      onCheckedChange={() => !disabled && toggleMode(mode)}
+                      disabled={disabled}
+                    />
+                    <Label
+                      htmlFor={`m-${mode}`}
+                      className={`cursor-pointer ${disabled ? 'cursor-not-allowed' : ''}`}
+                    >
+                      {mode}
+                    </Label>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
-          {settings.modes.includes('Classic') && (
+          {isClassic && (
             <div className="space-y-3">
-              <Label className="text-cyan-400 font-bold uppercase tracking-widest text-sm">Custom Target (Classic)</Label>
-              <Input 
-                type="number" 
+              <Label className="text-cyan-400 font-bold uppercase tracking-widest text-sm">
+                Target Number <span className="text-gray-500 font-normal normal-case tracking-normal text-xs">(10 – 50)</span>
+              </Label>
+              <Input
+                type="number"
                 value={settings.customTarget}
-                onChange={(e) => updateSettings({ customTarget: parseInt(e.target.value) || 24 })}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value) || 24;
+                  updateSettings({ customTarget: Math.min(50, Math.max(10, v)) });
+                }}
                 className="bg-gray-800 border-gray-700 text-white"
-                min={10} max={99}
+                min={10}
+                max={50}
               />
             </div>
           )}
@@ -118,13 +166,13 @@ export default function Home() {
             </div>
           </div>
 
-          <Button 
+          <Button
             onClick={handlePlay}
             className="w-full h-16 text-2xl font-bold uppercase tracking-wider bg-cyan-500 hover:bg-cyan-400 text-black shadow-[0_0_20px_rgba(34,211,238,0.4)] hover:shadow-[0_0_30px_rgba(34,211,238,0.6)] transition-all"
           >
             Play Now
           </Button>
-          
+
           <div className="text-center pt-2">
             <Link href="/leaderboard" className="text-gray-400 hover:text-cyan-400 transition-colors underline-offset-4 hover:underline">
               View Leaderboards

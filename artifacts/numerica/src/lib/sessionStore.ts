@@ -14,7 +14,6 @@ export interface GameSession {
   finished: boolean;
   streak: number;
   error: string | null;
-  balanceEquation: { lhs: string; rhs: number; missingOp: Operator; candidates: Operator[]; operands: [number, number] } | null;
   lastResult: { correct: boolean; points: number } | null;
 }
 
@@ -22,6 +21,7 @@ interface SessionActions {
   setDigits: (digits: number[], target: number) => void;
   toggleDigit: (idx: number) => void;
   addOp: (op: Operator) => void;
+  addBracket: (bracket: '(' | ')') => void;
   clearExpression: () => void;
   setTokens: (tokens: ExprToken[]) => void;
   addScore: (points: number) => void;
@@ -30,7 +30,6 @@ interface SessionActions {
   setStarted: (v: boolean) => void;
   setFinished: (v: boolean) => void;
   setError: (e: string | null) => void;
-  setBalance: (b: GameSession['balanceEquation']) => void;
   setLastResult: (r: GameSession['lastResult']) => void;
   reset: () => void;
 }
@@ -48,24 +47,56 @@ const initial: GameSession = {
   finished: false,
   streak: 0,
   error: null,
-  balanceEquation: null,
   lastResult: null,
 };
 
 export const useSessionStore = create<GameSession & SessionActions>((set) => ({
   ...initial,
+
   setDigits: (digits, target) => set({ digits, target, usedIndices: [], tokens: [], error: null }),
+
   toggleDigit: (idx) =>
     set((s) => {
       if (s.usedIndices.includes(idx)) return {};
+      const last = s.tokens[s.tokens.length - 1];
+      // Cannot place a number right after another number or a closing bracket
+      if (last && (last.type === 'number' || (last.type === 'bracket' && last.value === ')'))) return {};
       const newTokens: ExprToken[] = [...s.tokens, { type: 'number', value: s.digits[idx] }];
       return { tokens: newTokens, usedIndices: [...s.usedIndices, idx], error: null };
     }),
+
   addOp: (op) =>
     set((s) => {
-      if (s.tokens.length === 0 || s.tokens[s.tokens.length - 1].type === 'op') return {};
+      const last = s.tokens[s.tokens.length - 1];
+      // Op requires something before it; cannot follow another op or an open bracket
+      if (!last) return {};
+      if (last.type === 'op') return {};
+      if (last.type === 'bracket' && last.value === '(') return {};
       return { tokens: [...s.tokens, { type: 'op', value: op }], error: null };
     }),
+
+  addBracket: (bracket) =>
+    set((s) => {
+      const last = s.tokens[s.tokens.length - 1];
+      if (bracket === '(') {
+        // ( is allowed at start, after an op, or after another (
+        if (last && last.type === 'number') return {};
+        if (last && last.type === 'bracket' && last.value === ')') return {};
+        return { tokens: [...s.tokens, { type: 'bracket', value: '(' }], error: null };
+      } else {
+        // ) requires a number or ) before it
+        if (!last || last.type === 'op' || (last.type === 'bracket' && last.value === '(')) return {};
+        // Must have an unmatched open bracket
+        let depth = 0;
+        for (const t of s.tokens) {
+          if (t.type === 'bracket' && t.value === '(') depth++;
+          if (t.type === 'bracket' && t.value === ')') depth--;
+        }
+        if (depth <= 0) return {};
+        return { tokens: [...s.tokens, { type: 'bracket', value: ')' }], error: null };
+      }
+    }),
+
   clearExpression: () => set({ tokens: [], usedIndices: [], error: null }),
   setTokens: (tokens) => set({ tokens }),
   addScore: (points) => set((s) => ({ score: s.score + points })),
@@ -74,7 +105,6 @@ export const useSessionStore = create<GameSession & SessionActions>((set) => ({
   setStarted: (v) => set({ started: v }),
   setFinished: (v) => set({ finished: v }),
   setError: (e) => set({ error: e }),
-  setBalance: (b) => set({ balanceEquation: b }),
   setLastResult: (r) => set({ lastResult: r }),
   reset: () => set({ ...initial }),
 }));

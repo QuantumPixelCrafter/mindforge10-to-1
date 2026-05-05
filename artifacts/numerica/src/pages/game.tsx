@@ -7,7 +7,6 @@ import {
   generateSolvablePuzzle,
   generateDigits,
   generateTarget,
-  generateBalanceEquation,
   evaluateTokens,
   calculateScore,
 } from "@/lib/engine";
@@ -30,13 +29,14 @@ export default function Game() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const successRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const isBalance = settings.modes.includes("Balance the Equation");
   const isClosest = settings.modes.includes("Closest Wins");
   const isPlayTilDead = settings.timeMode === "Play 'til Dead";
   const totalTime = TIME_MAP[settings.timeMode] ?? 60;
 
   const loadPuzzle = useCallback(() => {
-    const target = settings.modes.includes("Classic") ? settings.customTarget : generateTarget();
+    const target = settings.modes.includes("Classic")
+      ? settings.customTarget
+      : generateTarget();
     let digits: number[];
     if (settings.modes.includes("Random Numbers")) {
       digits = generateDigits(settings.digitCount, settings.allowNegative);
@@ -44,13 +44,8 @@ export default function Game() {
       digits = generateSolvablePuzzle(settings.digitCount, target, settings.allowNegative);
     }
     session.setDigits(digits, target);
-    if (isBalance) {
-      session.setBalance(generateBalanceEquation(digits));
-    } else {
-      session.setBalance(null);
-    }
     session.setLastResult(null);
-  }, [settings, isBalance]);
+  }, [settings]);
 
   useEffect(() => {
     session.reset();
@@ -120,24 +115,14 @@ export default function Game() {
     }
   };
 
-  const handleBalanceSubmit = (op: Operator) => {
-    const bal = session.balanceEquation;
-    if (!bal) return;
-    const correct = op === bal.missingOp;
-    const pts = correct ? calculateScore({ exact: true, distance: 0, timeLeft: session.timeLeft, totalTime, opsUsed: 1 }) : 0;
-    session.addScore(pts);
-    session.setLastResult({ correct, points: pts });
-    if (isPlayTilDead && !correct) {
-      successRef.current = setTimeout(() => session.setFinished(true), 1000);
-      return;
-    }
-    session.incrementPuzzles();
-    successRef.current = setTimeout(() => loadPuzzle(), 900);
-  };
-
   const ops = unlockedOps ? [...DEFAULT_OPS, ...ADVANCED_OPS] : DEFAULT_OPS;
   const isLow = !isPlayTilDead && session.timeLeft <= 10;
-  const expressionStr = session.tokens.map(t => t.type === 'op' ? ` ${t.value} ` : String(t.value)).join('');
+
+  const expressionStr = session.tokens.map((t) => {
+    if (t.type === 'bracket') return t.value;
+    if (t.type === 'op') return ` ${t.value} `;
+    return String(t.value);
+  }).join('');
 
   const formatTime = (s: number) => {
     if (!isFinite(s) || s > 9999) return '∞';
@@ -167,9 +152,7 @@ export default function Game() {
 
       {/* Target */}
       <div className="text-center my-4">
-        <div className="text-xs text-gray-500 uppercase tracking-widest mb-1">
-          {isBalance ? "Fill the operator" : "Target"}
-        </div>
+        <div className="text-xs text-gray-500 uppercase tracking-widest mb-1">Target</div>
         <motion.div
           key={session.target}
           initial={{ scale: 0.8, opacity: 0 }}
@@ -177,9 +160,7 @@ export default function Game() {
           className="text-7xl font-black text-white drop-shadow-[0_0_20px_rgba(34,211,238,0.4)]"
           data-testid="target-display"
         >
-          {isBalance && session.balanceEquation
-            ? <span className="text-4xl">{session.balanceEquation.lhs} = {session.balanceEquation.rhs}</span>
-            : session.target}
+          {session.target}
         </motion.div>
       </div>
 
@@ -240,60 +221,55 @@ export default function Game() {
         {expressionStr || <span className="text-gray-600">Click digits and operators...</span>}
       </div>
 
-      {/* Operators */}
-      {!isBalance ? (
-        <div className="flex flex-wrap gap-2 justify-center my-2">
-          {ops.map((op) => (
-            <motion.button
-              key={op}
-              data-testid={`op-${op}`}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.92 }}
-              onClick={() => session.addOp(op)}
-              className="w-14 h-14 rounded-xl text-xl font-black bg-indigo-950 border-2 border-indigo-700 text-indigo-300 hover:border-indigo-400 hover:bg-indigo-900 transition-colors shadow-[0_0_10px_rgba(99,102,241,0.2)]"
-            >
-              {op}
-            </motion.button>
-          ))}
-        </div>
-      ) : (
-        <div className="flex gap-3 justify-center my-2">
-          {session.balanceEquation?.candidates.map((op) => (
-            <motion.button
-              key={op}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.92 }}
-              onClick={() => handleBalanceSubmit(op)}
-              data-testid={`balance-op-${op}`}
-              className="w-16 h-16 rounded-xl text-2xl font-black bg-indigo-950 border-2 border-indigo-700 text-indigo-300 hover:border-indigo-400 hover:bg-indigo-900 transition-colors"
-            >
-              {op}
-            </motion.button>
-          ))}
-        </div>
-      )}
+      {/* Operators + Brackets */}
+      <div className="flex flex-wrap gap-2 justify-center my-2">
+        {/* Bracket buttons */}
+        {(['(', ')'] as const).map((br) => (
+          <motion.button
+            key={br}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.92 }}
+            onClick={() => session.addBracket(br)}
+            className="w-14 h-14 rounded-xl text-2xl font-black bg-gray-800 border-2 border-gray-600 text-gray-300 hover:border-cyan-500 hover:bg-gray-700 transition-colors"
+          >
+            {br}
+          </motion.button>
+        ))}
+
+        {/* Operator buttons */}
+        {ops.map((op) => (
+          <motion.button
+            key={op}
+            data-testid={`op-${op}`}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.92 }}
+            onClick={() => session.addOp(op)}
+            className="w-14 h-14 rounded-xl text-xl font-black bg-indigo-950 border-2 border-indigo-700 text-indigo-300 hover:border-indigo-400 hover:bg-indigo-900 transition-colors shadow-[0_0_10px_rgba(99,102,241,0.2)]"
+          >
+            {op}
+          </motion.button>
+        ))}
+      </div>
 
       {/* Actions */}
-      {!isBalance && (
-        <div className="flex gap-3 w-full max-w-xl mt-2 mb-4">
-          <button
-            data-testid="button-clear"
-            onClick={() => session.clearExpression()}
-            className="flex-1 py-3 rounded-xl bg-gray-800 border border-gray-700 text-gray-400 hover:border-gray-500 hover:text-white transition-colors font-bold uppercase tracking-wider text-sm"
-          >
-            Clear
-          </button>
-          <motion.button
-            data-testid="button-submit"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
-            onClick={handleSubmit}
-            className="flex-[2] py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-black uppercase tracking-wider text-lg transition-all shadow-[0_0_20px_rgba(34,211,238,0.3)] hover:shadow-[0_0_30px_rgba(34,211,238,0.5)]"
-          >
-            Submit
-          </motion.button>
-        </div>
-      )}
+      <div className="flex gap-3 w-full max-w-xl mt-2 mb-4">
+        <button
+          data-testid="button-clear"
+          onClick={() => session.clearExpression()}
+          className="flex-1 py-3 rounded-xl bg-gray-800 border border-gray-700 text-gray-400 hover:border-gray-500 hover:text-white transition-colors font-bold uppercase tracking-wider text-sm"
+        >
+          Clear
+        </button>
+        <motion.button
+          data-testid="button-submit"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.97 }}
+          onClick={handleSubmit}
+          className="flex-[2] py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-black uppercase tracking-wider text-lg transition-all shadow-[0_0_20px_rgba(34,211,238,0.3)] hover:shadow-[0_0_30px_rgba(34,211,238,0.5)]"
+        >
+          Submit
+        </motion.button>
+      </div>
 
       {/* Puzzles solved */}
       <div className="text-xs text-gray-600 mb-2">
