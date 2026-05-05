@@ -1,0 +1,973 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: Study Smart API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: auth
+    description: Browser and mobile authentication endpoints
+  - name: subjects
+    description: Subject/folder management
+  - name: notes
+    description: Notes management
+  - name: schedules
+    description: Study schedule management
+  - name: goals
+    description: Goal setting
+  - name: quiz
+    description: AI quiz generation
+  - name: moods
+    description: Mood check-in
+  - name: leaderboard
+    description: Leaderboard and scores
+paths:
+  /auth/user:
+    get:
+      tags: [auth]
+      operationId: getCurrentAuthUser
+      summary: Get the currently authenticated user
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+        - $ref: '#/components/parameters/SessionCookie'
+      responses:
+        '200':
+          description: Auth status resolved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthUserEnvelope'
+  /login:
+    get:
+      tags: [auth]
+      operationId: beginBrowserLogin
+      summary: Start the browser OIDC login flow
+      parameters:
+        - name: returnTo
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirect to the OIDC authorization endpoint.
+  /callback:
+    get:
+      tags: [auth]
+      operationId: handleBrowserLoginCallback
+      summary: Complete the browser OIDC login flow
+      responses:
+        '302':
+          description: Redirect to the returnTo path on success.
+  /logout:
+    get:
+      tags: [auth]
+      operationId: logoutBrowserSession
+      summary: Clear the session and begin OIDC logout
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+        - $ref: '#/components/parameters/SessionCookie'
+      responses:
+        '302':
+          description: Redirect to the OIDC provider logout URL.
+  /mobile-auth/token-exchange:
+    post:
+      tags: [auth]
+      operationId: exchangeMobileAuthorizationCode
+      summary: Exchange a mobile OIDC code for a session token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExchangeMobileAuthorizationCodeBody'
+      responses:
+        '200':
+          description: Session created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExchangeMobileAuthorizationCodeResponse'
+  /mobile-auth/logout:
+    post:
+      tags: [auth]
+      operationId: logoutMobileSession
+      summary: Delete a mobile session token
+      parameters:
+        - $ref: '#/components/parameters/AuthorizationSessionHeader'
+      responses:
+        '200':
+          description: Logout processed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogoutMobileSessionResponse'
+  /leaderboard:
+    get:
+      tags: [leaderboard]
+      operationId: getLeaderboard
+      summary: Get top scores for all game types
+      responses:
+        '200':
+          description: Leaderboard data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaderboardResponse'
+  /leaderboard/scores:
+    post:
+      tags: [leaderboard]
+      operationId: submitScore
+      summary: Submit a score (authenticated)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitScoreBody'
+      responses:
+        '200':
+          description: Score saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaderboardEntry'
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /subjects:
+    get:
+      operationId: listSubjects
+      tags: [subjects]
+      summary: List all subjects
+      responses:
+        "200":
+          description: List of subjects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Subject"
+    post:
+      operationId: createSubject
+      tags: [subjects]
+      summary: Create a new subject
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSubjectBody"
+      responses:
+        "201":
+          description: Created subject
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subject"
+
+  /subjects/{id}:
+    put:
+      operationId: updateSubject
+      tags: [subjects]
+      summary: Update a subject
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSubjectBody"
+      responses:
+        "200":
+          description: Updated subject
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Subject"
+    delete:
+      operationId: deleteSubject
+      tags: [subjects]
+      summary: Delete a subject
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /notes:
+    get:
+      operationId: listNotes
+      tags: [notes]
+      summary: List all notes
+      parameters:
+        - name: subjectId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of notes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Note"
+    post:
+      operationId: createNote
+      tags: [notes]
+      summary: Create a new note
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateNoteBody"
+      responses:
+        "201":
+          description: Created note
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Note"
+
+  /notes/{id}:
+    get:
+      operationId: getNote
+      tags: [notes]
+      summary: Get a note by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Note
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Note"
+    put:
+      operationId: updateNote
+      tags: [notes]
+      summary: Update a note
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateNoteBody"
+      responses:
+        "200":
+          description: Updated note
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Note"
+    delete:
+      operationId: deleteNote
+      tags: [notes]
+      summary: Delete a note
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /notes/{id}/quiz:
+    post:
+      operationId: generateQuiz
+      tags: [quiz]
+      summary: Generate a quiz for a note using AI
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateQuizBody"
+      responses:
+        "200":
+          description: Generated quiz
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Quiz"
+
+  /schedules:
+    get:
+      operationId: listSchedules
+      tags: [schedules]
+      summary: List all study schedules
+      responses:
+        "200":
+          description: List of schedules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Schedule"
+    post:
+      operationId: createSchedule
+      tags: [schedules]
+      summary: Create a study schedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateScheduleBody"
+      responses:
+        "201":
+          description: Created schedule
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Schedule"
+
+  /schedules/{id}:
+    put:
+      operationId: updateSchedule
+      tags: [schedules]
+      summary: Update a schedule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateScheduleBody"
+      responses:
+        "200":
+          description: Updated schedule
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Schedule"
+    delete:
+      operationId: deleteSchedule
+      tags: [schedules]
+      summary: Delete a schedule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /goals:
+    get:
+      operationId: listGoals
+      tags: [goals]
+      summary: List all goals
+      responses:
+        "200":
+          description: List of goals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Goal"
+    post:
+      operationId: createGoal
+      tags: [goals]
+      summary: Create a goal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGoalBody"
+      responses:
+        "201":
+          description: Created goal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Goal"
+
+  /goals/{id}:
+    put:
+      operationId: updateGoal
+      tags: [goals]
+      summary: Update a goal
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateGoalBody"
+      responses:
+        "200":
+          description: Updated goal
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Goal"
+    delete:
+      operationId: deleteGoal
+      tags: [goals]
+      summary: Delete a goal
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /games/revision-cards:
+    post:
+      operationId: generateRevisionCards
+      tags: [quiz]
+      summary: Generate revision flashcard pairs from all notes using AI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateRevisionCardsBody"
+      responses:
+        "200":
+          description: Generated revision cards
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RevisionCardsResponse"
+
+  /moods:
+    get:
+      operationId: listMoods
+      tags: [moods]
+      summary: List mood check-ins
+      responses:
+        "200":
+          description: List of moods
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Mood"
+    post:
+      operationId: createMood
+      tags: [moods]
+      summary: Log a mood check-in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMoodBody"
+      responses:
+        "201":
+          description: Created mood
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Mood"
+
+components:
+  parameters:
+    AuthorizationSessionHeader:
+      name: Authorization
+      in: header
+      required: false
+      description: Opaque session token — `Bearer <sid>`.
+      schema:
+        type: string
+    SessionCookie:
+      name: sid
+      in: cookie
+      required: false
+      description: Browser session cookie.
+      schema:
+        type: string
+
+  schemas:
+    AuthUser:
+      type: object
+      required: [id, email, firstName, lastName, profileImageUrl]
+      properties:
+        id:
+          type: string
+        email:
+          type: [string, 'null']
+        firstName:
+          type: [string, 'null']
+        lastName:
+          type: [string, 'null']
+        profileImageUrl:
+          type: [string, 'null']
+    AuthUserEnvelope:
+      type: object
+      required: [user]
+      properties:
+        user:
+          oneOf:
+            - $ref: '#/components/schemas/AuthUser'
+            - type: 'null'
+    ExchangeMobileAuthorizationCodeBody:
+      type: object
+      required: [code, code_verifier, redirect_uri, state]
+      properties:
+        code:
+          type: string
+        code_verifier:
+          type: string
+        redirect_uri:
+          type: string
+        state:
+          type: string
+        nonce:
+          type: string
+    ExchangeMobileAuthorizationCodeResponse:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+    LogoutMobileSessionResponse:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+
+    LeaderboardEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: string
+        displayName:
+          type: string
+        profileImageUrl:
+          type: [string, 'null']
+        gameType:
+          type: string
+          enum: [memory-match, bubble-pop, quiz]
+        score:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - displayName
+        - gameType
+        - score
+        - createdAt
+
+    LeaderboardResponse:
+      type: object
+      properties:
+        memoryMatch:
+          type: array
+          items:
+            $ref: '#/components/schemas/LeaderboardEntry'
+        bubblePop:
+          type: array
+          items:
+            $ref: '#/components/schemas/LeaderboardEntry'
+        quiz:
+          type: array
+          items:
+            $ref: '#/components/schemas/LeaderboardEntry'
+      required:
+        - memoryMatch
+        - bubblePop
+        - quiz
+
+    SubmitScoreBody:
+      type: object
+      properties:
+        gameType:
+          type: string
+          enum: [memory-match, bubble-pop, quiz]
+        score:
+          type: integer
+      required:
+        - gameType
+        - score
+
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    Subject:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        color:
+          type: string
+        icon:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - color
+        - icon
+        - createdAt
+
+    CreateSubjectBody:
+      type: object
+      properties:
+        name:
+          type: string
+        color:
+          type: string
+        icon:
+          type: string
+      required:
+        - name
+        - color
+        - icon
+
+    Note:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        content:
+          type: string
+        subjectId:
+          type: integer
+        subjectName:
+          type: string
+        lastUsedAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - content
+        - subjectId
+        - createdAt
+        - updatedAt
+
+    CreateNoteBody:
+      type: object
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        subjectId:
+          type: integer
+      required:
+        - title
+        - content
+        - subjectId
+
+    UpdateNoteBody:
+      type: object
+      properties:
+        title:
+          type: string
+        content:
+          type: string
+        subjectId:
+          type: integer
+
+    GenerateQuizBody:
+      type: object
+      properties:
+        difficulty:
+          type: string
+          enum: [easy, normal, difficult]
+        questionCount:
+          type: integer
+          minimum: 3
+          maximum: 20
+      required:
+        - difficulty
+
+    Quiz:
+      type: object
+      properties:
+        noteId:
+          type: integer
+        difficulty:
+          type: string
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuizQuestion"
+      required:
+        - noteId
+        - difficulty
+        - questions
+
+    QuizQuestion:
+      type: object
+      properties:
+        id:
+          type: integer
+        question:
+          type: string
+        options:
+          type: array
+          items:
+            type: string
+        correctAnswer:
+          type: integer
+        explanation:
+          type: string
+      required:
+        - id
+        - question
+        - options
+        - correctAnswer
+        - explanation
+
+    Schedule:
+      type: object
+      properties:
+        id:
+          type: integer
+        subject:
+          type: string
+        dayOfWeek:
+          type: integer
+          minimum: 0
+          maximum: 6
+        startTime:
+          type: string
+        endTime:
+          type: string
+        color:
+          type: string
+        notificationEnabled:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - subject
+        - dayOfWeek
+        - startTime
+        - endTime
+        - color
+        - notificationEnabled
+        - createdAt
+
+    CreateScheduleBody:
+      type: object
+      properties:
+        subject:
+          type: string
+        dayOfWeek:
+          type: integer
+          minimum: 0
+          maximum: 6
+        startTime:
+          type: string
+        endTime:
+          type: string
+        color:
+          type: string
+        notificationEnabled:
+          type: boolean
+      required:
+        - subject
+        - dayOfWeek
+        - startTime
+        - endTime
+        - color
+        - notificationEnabled
+
+    Goal:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        deadline:
+          type: string
+          format: date-time
+        completed:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - deadline
+        - completed
+        - createdAt
+
+    CreateGoalBody:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        deadline:
+          type: string
+          format: date-time
+      required:
+        - title
+        - deadline
+
+    UpdateGoalBody:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        deadline:
+          type: string
+          format: date-time
+        completed:
+          type: boolean
+
+    Mood:
+      type: object
+      properties:
+        id:
+          type: integer
+        mood:
+          type: string
+          enum: [great, good, okay, tired, stressed]
+        note:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - mood
+        - createdAt
+
+    CreateMoodBody:
+      type: object
+      properties:
+        mood:
+          type: string
+          enum: [great, good, okay, tired, stressed]
+        note:
+          type: string
+      required:
+        - mood
+
+    GenerateRevisionCardsBody:
+      type: object
+      properties:
+        count:
+          type: integer
+          description: Number of pairs to generate (default 8)
+      required: []
+
+    RevisionCard:
+      type: object
+      properties:
+        id:
+          type: integer
+        term:
+          type: string
+        definition:
+          type: string
+      required:
+        - id
+        - term
+        - definition
+
+    RevisionCardsResponse:
+      type: object
+      properties:
+        cards:
+          type: array
+          items:
+            $ref: "#/components/schemas/RevisionCard"
+        subject:
+          type: string
+      required:
+        - cards

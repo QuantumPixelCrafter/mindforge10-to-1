@@ -1,0 +1,99 @@
+App Title: STUDY SMART
+Objective:
+Create a web application that allows users to input their notes, set timetables of their studying schedule, a goal setting page and include a place for AI generated quizzes according to their notes to help students study more effectively. The app will also send notifications when it is their time to study (i.e. the time they've set in the timetable). 
+Features
+User Input Form:
+Fields for note inputs, a "generate quiz button" in each of the notes and schedule setter.
+When the "generate quiz button" is clicked, our AI should generate a quiz according to the corresponding notes.
+The goal setting page should let the users input their goals, deadline, and a description, which the description is optional.
+
+Timetable/schedule setting:
+Let users to choose a time to study a certain subject (they will input it by themselves)
+A notification will be sent when the specified time arrives.
+
+Note input:
+Let the users input as many notes as they want, with different files available for them to add so that they could classify their notes, e.g.  subjects, etc.
+
+"Generate quiz button":
+Will generate a quiz with our AI according to their notes input.
+Let users choose their own difficulties among "easy", "normal" and "difficult".
+Let users know that the more the note is input, the better the quiz will be.
+Make sure that you will notify the users as images will not be read.
+
+User-Friendly Interface:
+Simple and intuitive UI that allows easy navigation.
+Responsive design to work across devices (desktop and mobile).
+
+Storage for Assignments:
+Use local storage or a database to save user assignments and settings.
+
+Editing and Deleting schedules and notes:
+Allow users to edit or delete schedules and notes if they are no longer useful.
+Our AI will also send reminders asking the users if they want to delete a certain note or not, if it hasn't been used for 6 months, clearing up storage.
+
+Log in and Sign up page:
+Setting up an account is optional, but data won't be shared across other devices if they are not logged in. Please include it in the home page.
+
+Home page:
+Include all features with any possible ways.
+Give every app a recognizable icon.
+Make it simple but not dull. 
+
+Optional Features:
+Include a calendar with their timetables/schedules.
+Some interactive features, e.g. minigames, mood check-in. (If minigames are included, make 1 for study and 1 for relaxing)
+
+NOTES:
+Make sure that there are buttons for users to go back to the home page and the "three horizontal lines" to switch to another feature.
+The most used feature would be in the "often used" category when the "three horizontal lines" is clicked.
+
+Tech Stack Suggestions:
+Frontend: HTML, CSS, JavaScript (frameworks like React or Vue.js could be used).
+Backend: Node.js or any desired backend service to manage data and notifications.
+Database: MongoDB or another database option for storing assignments.
+
+Example User Flow:
+The user opens the app and sees our home screen.
+The user clicked the note button.
+Notes are opened.
+The user opens a note and clicks the "generate quiz button".
+A quiz according to the users' note is generated.
+
+Additional Considerations:
+Ensure proper data validation for user inputs.
+Implement clear error messages for better user experience.
+Consider user privacy and data security when handling assignments.
+
+Log in and Sign up page:
+Setting up an account is optional, but data won't be shared across other devices if they are not logged in. Please include it in the home page.
+
+Home page:
+Include all features with any possible ways.
+Give every app a recognizable icon.
+Make it simple but not dull. 
+
+Optional Features:
+Include a calendar with their timetables/schedules.
+Some interactive features, e.g. minigames, mood check-in. (If minigames are included, make 1 for study and 1 for relaxing)
+
+Be aware that:
+Make sure that there are buttons for users to go back to the home page and the "three horizontal lines" to switch to another feature.
+The most used feature would be in the "often used" category when the "three horizontal lines" is clicked.
+The app should be both mobile and laptop friendly/ the users may switch from mobile version to laptop version.
+
+Tech Stack Suggestions:
+Frontend: HTML, CSS, JavaScript (frameworks like React or Vue.js could be used).
+Backend: Node.js or any desired backend service to manage data and notifications.
+Database: MongoDB or another database option for storing assignments.
+
+Example User Flow:
+The user opens the app and sees our home screen.
+The user clicked the note button.
+Notes are opened.
+The user opens a note and clicks the "generate quiz button".
+A quiz according to the users' note is generated.
+
+Additional Considerations:
+Ensure proper data validation for user inputs.
+Implement clear error messages for better user experience.
+Consider user privacy and data security when handling assignments.

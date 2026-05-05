@@ -1,0 +1,19 @@
+packages:
+  "framer-motion": "For smooth page transitions and interactive element animations"
+  "date-fns": "For robust calendar and timetable date manipulation"
+  "lucide-react": "For crisp, modern iconography across the application"
+  "clsx": "For dynamic class name construction"
+  "tailwind-merge": "For merging Tailwind utility classes safely"
+
+images:
+  - path: "artifacts/study-smart/public/images/dashboard-hero.png"
+    description: "A vibrant, 3D abstract illustration of floating study items like books, a clock, a glowing lightbulb, and colorful geometric shapes (spheres, wavy ribbons) in a bright, warm, motivating color palette (coral, yellow, teal, soft pink) on a transparent or light cream background. Highly polished, modern, premium feel."
+    aspect_ratio: "16:9"
+  - path: "artifacts/study-smart/public/images/empty-state-notes.png"
+    description: "A cute, soft 3D illustration of an empty notebook with a smiling pencil floating nearby, warm pastel colors, soft lighting, inviting and friendly aesthetic."
+    aspect_ratio: "1:1"
+
+notes:
+  - Using generated Orval hooks from @workspace/api-client-react
+  - Assuming Shadcn UI components are available in @/components/ui/
+  - The app uses wouter for routing and Framer Motion for page transitions

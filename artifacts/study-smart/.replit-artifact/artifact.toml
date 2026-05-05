@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Study Smart"
+version = "1.0.0"
+id = "artifacts/study-smart"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+localPort = 24012
+name = "web"
+paths = ["/"]
+
+[services.development]
+run = "pnpm --filter @workspace/study-smart run dev"
+
+[services.env]
+PORT = "24012"
+BASE_PATH = "/"
+
+[services.production]
+build = ["pnpm", "--filter", "@workspace/study-smart", "run", "build"]
+publicDir = "artifacts/study-smart/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
