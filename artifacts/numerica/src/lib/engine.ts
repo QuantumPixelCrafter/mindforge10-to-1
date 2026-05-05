@@ -62,17 +62,39 @@ export function generateTarget(min = 10, max = 50): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+/**
+ * Brute-forces all 9^3 = 729 positive 3-digit combos to find one that solves
+ * the target, then pads extra slots with 1 (×1 preserves any result).
+ * This is the last-resort fallback and is guaranteed to succeed for any
+ * target in the range 10–50.
+ */
+function constructGuaranteedDigits(count: number, target: number): number[] {
+  for (let a = 1; a <= 9; a++) {
+    for (let b = 1; b <= 9; b++) {
+      for (let c = 1; c <= 9; c++) {
+        const base = [a, b, c];
+        if (canSolve(base, target)) {
+          return count <= 3 ? base : [...base, ...Array(count - 3).fill(1)];
+        }
+      }
+    }
+  }
+  // Should never be reached for targets 10–50
+  return Array(count).fill(1);
+}
+
 export function generateSolvablePuzzle(
   count: number,
   target: number,
   allowNegative: boolean,
-  maxAttempts = 200
+  maxAttempts = 1000
 ): number[] {
   for (let i = 0; i < maxAttempts; i++) {
     const digits = generateDigits(count, allowNegative);
     if (canSolve(digits, target)) return digits;
   }
-  return generateDigits(count, allowNegative);
+  // Guaranteed constructive fallback — never returns an unsolvable puzzle
+  return constructGuaranteedDigits(count, target);
 }
 
 export function evaluateTokens(tokens: ExprToken[]): { result: number | null; error?: string } {
