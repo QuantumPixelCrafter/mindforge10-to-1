@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/numerica/"
+title = "Numerica"
+version = "1.0.0"
+id = "artifacts/numerica"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/numerica/" ]
+localPort = 22104
+
+[services.development]
+run = "pnpm --filter @workspace/numerica run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/numerica", "run", "build" ]
+publicDir = "artifacts/numerica/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22104"
+BASE_PATH = "/numerica/"
