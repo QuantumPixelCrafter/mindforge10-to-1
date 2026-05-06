@@ -113,8 +113,8 @@ export default function TimetablePage() {
     setColor(COLORS[0]);
     setNotify(true);
     setEventType("class");
-    setStartDate(format(selectedDate, "yyyy-MM-dd"));
-    setEndDate(format(selectedDate, "yyyy-MM-dd"));
+    setStartDate("");
+    setEndDate("");
     setOpen(true);
   };
 
@@ -137,7 +137,6 @@ export default function TimetablePage() {
       toast({ title: "Please select a start and end date", variant: "destructive" });
       return;
     }
-    const currentDateStr = format(selectedDate, "yyyy-MM-dd");
     try {
       await createMut.mutateAsync({
         data: {
@@ -148,8 +147,8 @@ export default function TimetablePage() {
           color,
           notificationEnabled: notify,
           eventType,
-          startDate: scheduleMode === "daterange" ? startDate : (startDate || currentDateStr),
-          endDate: scheduleMode === "daterange" ? endDate : (endDate || startDate || currentDateStr),
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
           isDateRange: scheduleMode === "daterange",
         },
       });
