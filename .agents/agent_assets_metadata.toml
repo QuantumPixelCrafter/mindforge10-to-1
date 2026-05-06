@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "sHml1IlDeywX6OCu7u036"
+uri = "file://mind-forge-essay.md"
+type = "text"
+title = "Mind Forge — 2000-Word App Essay"
