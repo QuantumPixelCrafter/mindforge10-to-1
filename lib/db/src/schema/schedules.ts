@@ -13,6 +13,7 @@ export const schedulesTable = pgTable("schedules", {
   eventType: text("event_type").default("class"),
   startDate: text("start_date"),
   endDate: text("end_date"),
+  isDateRange: boolean("is_date_range").notNull().default(false),
   deletedDates: text("deleted_dates").default("[]"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

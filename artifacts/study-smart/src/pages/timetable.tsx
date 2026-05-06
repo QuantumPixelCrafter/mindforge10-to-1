@@ -47,6 +47,11 @@ function isScheduleActiveOnDate(schedule: Schedule, dateStr: string): boolean {
   return true;
 }
 
+function scheduleMatchesDay(schedule: Schedule, dayOfWeek: number, dateStr: string): boolean {
+  if (schedule.isDateRange) return isScheduleActiveOnDate(schedule, dateStr);
+  return schedule.dayOfWeek === dayOfWeek && isScheduleActiveOnDate(schedule, dateStr);
+}
+
 export default function TimetablePage() {
   const { toast } = useToast();
   const { t } = useLanguage();
@@ -79,6 +84,7 @@ export default function TimetablePage() {
 
   const [open, setOpen] = useState(false);
   const [subject, setSubject] = useState("");
+  const [scheduleMode, setScheduleMode] = useState<"weekly" | "daterange">("weekly");
   const [day, setDay] = useState(selectedDate.getDay());
   const [start, setStart] = useState("09:00");
   const [end, setEnd] = useState("10:00");
@@ -91,7 +97,7 @@ export default function TimetablePage() {
   const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
   const dayOfWeek = selectedDate.getDay();
   const daySchedules = schedules
-    .filter((s) => s.dayOfWeek === dayOfWeek && isScheduleActiveOnDate(s, selectedDateStr))
+    .filter((s) => scheduleMatchesDay(s, dayOfWeek, selectedDateStr))
     .sort((a, b) => a.startTime.localeCompare(b.startTime));
 
   const goToDate = (date: Date) => {
@@ -101,13 +107,14 @@ export default function TimetablePage() {
   const openAddDialog = () => {
     setDay(selectedDate.getDay());
     setSubject("");
+    setScheduleMode("weekly");
     setStart("09:00");
     setEnd("10:00");
     setColor(COLORS[0]);
     setNotify(true);
     setEventType("class");
-    setStartDate("");
-    setEndDate("");
+    setStartDate(format(selectedDate, "yyyy-MM-dd"));
+    setEndDate(format(selectedDate, "yyyy-MM-dd"));
     setOpen(true);
   };
 
@@ -126,21 +133,24 @@ export default function TimetablePage() {
 
   const handleSave = async () => {
     if (!subject) return;
-    const selectedDateStr = format(selectedDate, "yyyy-MM-dd");
-    const resolvedStart = startDate || selectedDateStr;
-    const resolvedEnd = endDate || startDate || selectedDateStr;
+    if (scheduleMode === "daterange" && (!startDate || !endDate)) {
+      toast({ title: "Please select a start and end date", variant: "destructive" });
+      return;
+    }
+    const currentDateStr = format(selectedDate, "yyyy-MM-dd");
     try {
       await createMut.mutateAsync({
         data: {
           subject,
-          dayOfWeek: day,
+          dayOfWeek: scheduleMode === "daterange" ? 0 : day,
           startTime: start,
           endTime: end,
           color,
           notificationEnabled: notify,
           eventType,
-          startDate: resolvedStart,
-          endDate: resolvedEnd,
+          startDate: scheduleMode === "daterange" ? startDate : (startDate || currentDateStr),
+          endDate: scheduleMode === "daterange" ? endDate : (endDate || startDate || currentDateStr),
+          isDateRange: scheduleMode === "daterange",
         },
       });
       setOpen(false);
@@ -353,19 +363,61 @@ export default function TimetablePage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-semibold mb-1 block">Day</label>
-                <select
-                  value={day}
-                  onChange={(e) => setDay(Number(e.target.value))}
-                  className="w-full h-10 px-3 rounded-xl bg-muted/50 border-transparent focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm"
-                >
-                  {DAYS.map((d, i) => (
-                    <option key={i} value={i}>{d}</option>
-                  ))}
-                </select>
+            {/* Schedule Mode Toggle */}
+            <div>
+              <label className="text-sm font-semibold mb-2 block">Repeat</label>
+              <div className="grid grid-cols-2 gap-2">
+                {(["weekly", "daterange"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setScheduleMode(mode)}
+                    className={cn(
+                      "px-3 py-2 rounded-xl text-xs font-bold border transition-all",
+                      scheduleMode === mode
+                        ? "bg-primary/10 text-primary border-primary/30 ring-1 ring-primary/30"
+                        : "bg-muted/40 text-muted-foreground border-transparent hover:border-border"
+                    )}
+                  >
+                    {mode === "weekly" ? "Weekly (day of week)" : "Consecutive dates"}
+                  </button>
+                ))}
               </div>
+            </div>
+
+            {/* Weekly mode: day picker */}
+            {scheduleMode === "weekly" && (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-semibold mb-1 block">Day</label>
+                  <select
+                    value={day}
+                    onChange={(e) => setDay(Number(e.target.value))}
+                    className="w-full h-10 px-3 rounded-xl bg-muted/50 border-transparent focus:outline-none focus:ring-2 focus:ring-primary/20 text-sm"
+                  >
+                    {DAYS.map((d, i) => (
+                      <option key={i} value={i}>{d}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-semibold mb-1 block">{t.timetable.color}</label>
+                  <div className="flex gap-1.5 mt-1 flex-wrap">
+                    {COLORS.map((c) => (
+                      <button
+                        key={c}
+                        onClick={() => setColor(c)}
+                        className={`w-6 h-6 rounded-full border-2 transition-all ${color === c ? "border-foreground scale-125" : "border-transparent"}`}
+                        style={{ backgroundColor: c }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Daterange mode: no day picker, just color */}
+            {scheduleMode === "daterange" && (
               <div>
                 <label className="text-sm font-semibold mb-1 block">{t.timetable.color}</label>
                 <div className="flex gap-1.5 mt-1 flex-wrap">
@@ -379,7 +431,7 @@ export default function TimetablePage() {
                   ))}
                 </div>
               </div>
-            </div>
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -402,36 +454,76 @@ export default function TimetablePage() {
               </div>
             </div>
 
-            {/* Optional date range */}
-            <div className="space-y-2">
-              <label className="text-sm font-semibold block">Active Date Range <span className="text-muted-foreground font-normal">({t.timetable.optional})</span></label>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">{t.timetable.startDate}</label>
-                  <Input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="rounded-xl bg-muted/50 border-transparent focus-visible:bg-background text-sm"
-                    style={{ colorScheme: "light dark" }}
-                  />
+            {/* Weekly mode: optional date range to bound the repetition */}
+            {scheduleMode === "weekly" && (
+              <div className="space-y-2">
+                <label className="text-sm font-semibold block">
+                  Active Date Range <span className="text-muted-foreground font-normal">({t.timetable.optional})</span>
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">{t.timetable.startDate}</label>
+                    <Input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="rounded-xl bg-muted/50 border-transparent focus-visible:bg-background text-sm"
+                      style={{ colorScheme: "light dark" }}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">{t.timetable.endDate}</label>
+                    <Input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      min={startDate || undefined}
+                      className="rounded-xl bg-muted/50 border-transparent focus-visible:bg-background text-sm"
+                      style={{ colorScheme: "light dark" }}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">{t.timetable.endDate}</label>
-                  <Input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    min={startDate || undefined}
-                    className="rounded-xl bg-muted/50 border-transparent focus-visible:bg-background text-sm"
-                    style={{ colorScheme: "light dark" }}
-                  />
-                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Repeats every <span className="font-medium">{DAYS[day]}</span> between these dates.
+                </p>
               </div>
-              <p className="text-[11px] text-muted-foreground">
-                Leave blank to add only for <span className="font-medium">{format(selectedDate, "MMM d, yyyy")}</span>. Set a range to repeat on multiple {DAYS[day]}s.
-              </p>
-            </div>
+            )}
+
+            {/* Date range mode: required start + end date */}
+            {scheduleMode === "daterange" && (
+              <div className="space-y-2">
+                <label className="text-sm font-semibold block">Date Range <span className="text-red-500">*</span></label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">From</label>
+                    <Input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => {
+                        setStartDate(e.target.value);
+                        if (endDate && e.target.value > endDate) setEndDate(e.target.value);
+                      }}
+                      className="rounded-xl bg-muted/50 border-transparent focus-visible:bg-background text-sm"
+                      style={{ colorScheme: "light dark" }}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground mb-1 block">To</label>
+                    <Input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      min={startDate || undefined}
+                      className="rounded-xl bg-muted/50 border-transparent focus-visible:bg-background text-sm"
+                      style={{ colorScheme: "light dark" }}
+                    />
+                  </div>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Event appears on <span className="font-medium">every day</span> between these dates.
+                </p>
+              </div>
+            )}
 
             <div className="flex items-center justify-between bg-muted/30 p-3 rounded-xl border border-border/50">
               <div className="space-y-0.5">

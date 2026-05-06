@@ -16,8 +16,4 @@ export interface LeaderboardEntry {
   gameType: LeaderboardEntryGameType;
   score: number;
   createdAt: Date;
-  /** @nullable */
-  subject?: string | null;
-  /** @nullable */
-  userLevel?: string | null;
 }

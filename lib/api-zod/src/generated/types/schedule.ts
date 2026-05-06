@@ -21,6 +21,7 @@ export interface Schedule {
   eventType?: string | null;
   startDate?: string | null;
   endDate?: string | null;
+  isDateRange: boolean;
   deletedDates?: string | null;
   createdAt: Date;
 }

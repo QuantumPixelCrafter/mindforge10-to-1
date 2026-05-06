@@ -25,11 +25,6 @@ export const GetCurrentAuthUserResponse = zod.object({
       firstName: zod.string().nullable(),
       lastName: zod.string().nullable(),
       profileImageUrl: zod.string().nullable(),
-      level: zod.string().nullable().optional(),
-      pointsSpent: zod.number().optional(),
-      equippedBackground: zod.string().nullable().optional(),
-      equippedFrame: zod.string().nullable().optional(),
-      equippedNametag: zod.string().nullable().optional(),
     }),
     zod.null(),
   ]),
@@ -126,8 +121,6 @@ export const GetLeaderboardResponse = zod.object({
 export const SubmitScoreBody = zod.object({
   gameType: zod.enum(["memory-match", "bubble-pop", "quiz"]),
   score: zod.number(),
-  subject: zod.string().optional(),
-  userLevel: zod.string().optional(),
 });
 
 export const SubmitScoreResponse = zod.object({
@@ -290,7 +283,6 @@ export const GenerateQuizBody = zod.object({
     .min(generateQuizBodyQuestionCountMin)
     .max(generateQuizBodyQuestionCountMax)
     .optional(),
-  level: zod.string().optional(),
 });
 
 export const GenerateQuizResponse = zod.object({
@@ -324,10 +316,11 @@ export const ListSchedulesResponseItem = zod.object({
   endTime: zod.string(),
   color: zod.string(),
   notificationEnabled: zod.boolean(),
-  eventType: zod.string().nullable().optional(),
-  startDate: zod.string().nullable().optional(),
-  endDate: zod.string().nullable().optional(),
-  deletedDates: zod.string().nullable().optional(),
+  eventType: zod.string().nullish(),
+  startDate: zod.string().nullish(),
+  endDate: zod.string().nullish(),
+  isDateRange: zod.boolean(),
+  deletedDates: zod.string().nullish(),
   createdAt: zod.date(),
 });
 export const ListSchedulesResponse = zod.array(ListSchedulesResponseItem);
@@ -348,9 +341,10 @@ export const CreateScheduleBody = zod.object({
   endTime: zod.string(),
   color: zod.string(),
   notificationEnabled: zod.boolean(),
-  eventType: zod.string().nullable().optional(),
-  startDate: zod.string().nullable().optional(),
-  endDate: zod.string().nullable().optional(),
+  eventType: zod.string().optional(),
+  startDate: zod.string().optional(),
+  endDate: zod.string().optional(),
+  isDateRange: zod.boolean().optional(),
 });
 
 /**
@@ -373,9 +367,10 @@ export const UpdateScheduleBody = zod.object({
   endTime: zod.string(),
   color: zod.string(),
   notificationEnabled: zod.boolean(),
-  eventType: zod.string().nullable().optional(),
-  startDate: zod.string().nullable().optional(),
-  endDate: zod.string().nullable().optional(),
+  eventType: zod.string().optional(),
+  startDate: zod.string().optional(),
+  endDate: zod.string().optional(),
+  isDateRange: zod.boolean().optional(),
 });
 
 export const updateScheduleResponseDayOfWeekMin = 0;
@@ -392,10 +387,11 @@ export const UpdateScheduleResponse = zod.object({
   endTime: zod.string(),
   color: zod.string(),
   notificationEnabled: zod.boolean(),
-  eventType: zod.string().nullable().optional(),
-  startDate: zod.string().nullable().optional(),
-  endDate: zod.string().nullable().optional(),
-  deletedDates: zod.string().nullable().optional(),
+  eventType: zod.string().nullish(),
+  startDate: zod.string().nullish(),
+  endDate: zod.string().nullish(),
+  isDateRange: zod.boolean(),
+  deletedDates: zod.string().nullish(),
   createdAt: zod.date(),
 });
 
@@ -407,7 +403,7 @@ export const DeleteScheduleParams = zod.object({
 });
 
 /**
- * @summary Skip a schedule on a specific date
+ * @summary Skip a single occurrence of a schedule
  */
 export const SkipScheduleDateParams = zod.object({
   id: zod.coerce.number(),
@@ -415,6 +411,28 @@ export const SkipScheduleDateParams = zod.object({
 
 export const SkipScheduleDateBody = zod.object({
   date: zod.string(),
+});
+
+export const skipScheduleDateResponseDayOfWeekMin = 0;
+export const skipScheduleDateResponseDayOfWeekMax = 6;
+
+export const SkipScheduleDateResponse = zod.object({
+  id: zod.number(),
+  subject: zod.string(),
+  dayOfWeek: zod
+    .number()
+    .min(skipScheduleDateResponseDayOfWeekMin)
+    .max(skipScheduleDateResponseDayOfWeekMax),
+  startTime: zod.string(),
+  endTime: zod.string(),
+  color: zod.string(),
+  notificationEnabled: zod.boolean(),
+  eventType: zod.string().nullish(),
+  startDate: zod.string().nullish(),
+  endDate: zod.string().nullish(),
+  isDateRange: zod.boolean(),
+  deletedDates: zod.string().nullish(),
+  createdAt: zod.date(),
 });
 
 /**
@@ -436,7 +454,7 @@ export const ListGoalsResponse = zod.array(ListGoalsResponseItem);
 export const CreateGoalBody = zod.object({
   title: zod.string(),
   description: zod.string().optional(),
-  deadline: zod.coerce.date(),
+  deadline: zod.date(),
 });
 
 /**
@@ -449,7 +467,7 @@ export const UpdateGoalParams = zod.object({
 export const UpdateGoalBody = zod.object({
   title: zod.string().optional(),
   description: zod.string().optional(),
-  deadline: zod.coerce.date().optional(),
+  deadline: zod.date().optional(),
   completed: zod.boolean().optional(),
 });
 

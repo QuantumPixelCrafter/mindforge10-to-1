@@ -406,6 +406,31 @@ paths:
         "204":
           description: Deleted
 
+  /schedules/{id}/skip-date:
+    patch:
+      operationId: skipScheduleDate
+      tags: [schedules]
+      summary: Skip a single occurrence of a schedule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SkipScheduleDateBody"
+      responses:
+        "200":
+          description: Updated schedule
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Schedule"
+
   /goals:
     get:
       operationId: listGoals
@@ -820,6 +845,20 @@ components:
           type: string
         notificationEnabled:
           type: boolean
+        eventType:
+          type: string
+          nullable: true
+        startDate:
+          type: string
+          nullable: true
+        endDate:
+          type: string
+          nullable: true
+        isDateRange:
+          type: boolean
+        deletedDates:
+          type: string
+          nullable: true
         createdAt:
           type: string
           format: date-time
@@ -831,6 +870,7 @@ components:
         - endTime
         - color
         - notificationEnabled
+        - isDateRange
         - createdAt
 
     CreateScheduleBody:
@@ -850,6 +890,14 @@ components:
           type: string
         notificationEnabled:
           type: boolean
+        eventType:
+          type: string
+        startDate:
+          type: string
+        endDate:
+          type: string
+        isDateRange:
+          type: boolean
       required:
         - subject
         - dayOfWeek
@@ -857,6 +905,14 @@ components:
         - endTime
         - color
         - notificationEnabled
+
+    SkipScheduleDateBody:
+      type: object
+      properties:
+        date:
+          type: string
+      required:
+        - date
 
     Goal:
       type: object

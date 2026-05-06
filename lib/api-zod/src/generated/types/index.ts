@@ -36,6 +36,7 @@ export * from "./quizQuestion";
 export * from "./revisionCard";
 export * from "./revisionCardsResponse";
 export * from "./schedule";
+export * from "./skipScheduleDateBody";
 export * from "./subject";
 export * from "./submitScoreBody";
 export * from "./submitScoreBodyGameType";

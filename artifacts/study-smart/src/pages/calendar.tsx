@@ -21,6 +21,11 @@ function isScheduleActiveOnDate(schedule: Schedule, dateStr: string): boolean {
   return true;
 }
 
+function scheduleMatchesDay(schedule: Schedule, dayOfWeek: number, dateStr: string): boolean {
+  if (schedule.isDateRange) return isScheduleActiveOnDate(schedule, dateStr);
+  return schedule.dayOfWeek === dayOfWeek && isScheduleActiveOnDate(schedule, dateStr);
+}
+
 interface DeleteDialogState {
   schedule: Schedule;
   dateStr: string;
@@ -131,7 +136,7 @@ export default function CalendarPage() {
             const dateStr = format(day, "yyyy-MM-dd");
 
             const daySchedules = schedules.filter(
-              (s) => s.dayOfWeek === dayOfWeek && isScheduleActiveOnDate(s, dateStr)
+              (s) => scheduleMatchesDay(s, dayOfWeek, dateStr)
             );
             const dayGoals = goals.filter((g) => isSameDay(parseISO(g.deadline), day));
 

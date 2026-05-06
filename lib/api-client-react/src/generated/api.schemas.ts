@@ -8,8 +8,6 @@
 export interface AuthUser {
   id: string;
   /** @nullable */
-  username: string | null;
-  /** @nullable */
   email: string | null;
   /** @nullable */
   firstName: string | null;
@@ -17,22 +15,6 @@ export interface AuthUser {
   lastName: string | null;
   /** @nullable */
   profileImageUrl: string | null;
-  /** @nullable */
-  level: string | null;
-  pointsSpent?: number;
-  equippedBackground?: string | null;
-  equippedFrame?: string | null;
-  equippedNametag?: string | null;
-  equippedTitle?: string | null;
-  isPublic?: boolean;
-  showNameOnLeaderboard?: boolean;
-  showNameInSearch?: boolean;
-  allowProfileView?: boolean;
-  isDeveloper?: boolean;
-  country?: string | null;
-  gradeIndex?: number | null;
-  gradeSchoolYear?: number | null;
-  preferredLanguage?: string | null;
 }
 
 export interface AuthUserEnvelope {
@@ -73,27 +55,12 @@ export interface LeaderboardEntry {
   gameType: LeaderboardEntryGameType;
   score: number;
   createdAt: string;
-  /** @nullable */
-  subject?: string | null;
-  /** @nullable */
-  userLevel?: string | null;
-}
-
-export interface LeaderboardQuizMeta {
-  levels: string[];
-  subjects: string[];
 }
 
 export interface LeaderboardResponse {
   memoryMatch: LeaderboardEntry[];
   bubblePop: LeaderboardEntry[];
   quiz: LeaderboardEntry[];
-  quizMeta: LeaderboardQuizMeta;
-}
-
-export interface LeaderboardParams {
-  quizLevel?: string;
-  quizSubject?: string;
 }
 
 export type SubmitScoreBodyGameType =
@@ -103,17 +70,11 @@ export const SubmitScoreBodyGameType = {
   "memory-match": "memory-match",
   "bubble-pop": "bubble-pop",
   quiz: "quiz",
-  "math-blitz-easy": "math-blitz-easy",
-  "math-blitz-normal": "math-blitz-normal",
-  "math-blitz-hard": "math-blitz-hard",
 } as const;
 
 export interface SubmitScoreBody {
   gameType: SubmitScoreBodyGameType;
   score: number;
-  subject?: string;
-  userLevel?: string;
-  secondsTaken?: number;
 }
 
 export interface HealthStatus {
@@ -173,7 +134,6 @@ export interface GenerateQuizBody {
    * @maximum 20
    */
   questionCount?: number;
-  level?: string;
 }
 
 export interface QuizQuestion {
@@ -205,6 +165,7 @@ export interface Schedule {
   eventType?: string | null;
   startDate?: string | null;
   endDate?: string | null;
+  isDateRange: boolean;
   deletedDates?: string | null;
   createdAt: string;
 }
@@ -220,9 +181,14 @@ export interface CreateScheduleBody {
   endTime: string;
   color: string;
   notificationEnabled: boolean;
-  eventType?: string | null;
-  startDate?: string | null;
-  endDate?: string | null;
+  eventType?: string;
+  startDate?: string;
+  endDate?: string;
+  isDateRange?: boolean;
+}
+
+export interface SkipScheduleDateBody {
+  date: string;
 }
 
 export interface Goal {
@@ -308,26 +274,3 @@ export type BeginBrowserLoginParams = {
 export type ListNotesParams = {
   subjectId?: number;
 };
-
-export interface Achievement {
-  key: string;
-  title: string;
-  description: string;
-  requirement?: string;
-  icon: string;
-  points: number;
-  category: string;
-  earned: boolean;
-  earnedAt?: string;
-}
-
-export interface AchievementsResponse {
-  achievements: Achievement[];
-  totalPoints: number;
-}
-
-export interface CheckAchievementsResponse {
-  newlyEarned: Omit<Achievement, "earned" | "earnedAt">[];
-  achievements: Achievement[];
-  totalPoints: number;
-}

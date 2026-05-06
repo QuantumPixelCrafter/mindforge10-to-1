@@ -9,8 +9,6 @@
 export interface AuthUser {
   id: string;
   /** @nullable */
-  username: string | null;
-  /** @nullable */
   email: string | null;
   /** @nullable */
   firstName: string | null;
@@ -18,8 +16,4 @@ export interface AuthUser {
   lastName: string | null;
   /** @nullable */
   profileImageUrl: string | null;
-  /** @nullable */
-  level: string | null;
-  isDeveloper?: boolean;
-  devMode?: boolean;
 }

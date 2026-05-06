@@ -39,6 +39,7 @@ import type {
   Quiz,
   RevisionCardsResponse,
   Schedule,
+  SkipScheduleDateBody,
   Subject,
   SubmitScoreBody,
   UpdateGoalBody,
@@ -558,27 +559,22 @@ export const getGetLeaderboardUrl = () => {
 };
 
 export const getLeaderboard = async (
-  params?: { quizLevel?: string; quizSubject?: string },
   options?: RequestInit,
 ): Promise<LeaderboardResponse> => {
-  const qs = new URLSearchParams();
-  if (params?.quizLevel) qs.set("quizLevel", params.quizLevel);
-  if (params?.quizSubject) qs.set("quizSubject", params.quizSubject);
-  const url = qs.toString() ? `${getGetLeaderboardUrl()}?${qs}` : getGetLeaderboardUrl();
-  return customFetch<LeaderboardResponse>(url, {
+  return customFetch<LeaderboardResponse>(getGetLeaderboardUrl(), {
     ...options,
     method: "GET",
   });
 };
 
-export const getGetLeaderboardQueryKey = (params?: { quizLevel?: string; quizSubject?: string }) => {
-  return [`/api/leaderboard`, params] as const;
+export const getGetLeaderboardQueryKey = () => {
+  return [`/api/leaderboard`] as const;
 };
 
 export const getGetLeaderboardQueryOptions = <
   TData = Awaited<ReturnType<typeof getLeaderboard>>,
   TError = ErrorType<unknown>,
->(params?: { quizLevel?: string; quizSubject?: string }, options?: {
+>(options?: {
   query?: UseQueryOptions<
     Awaited<ReturnType<typeof getLeaderboard>>,
     TError,
@@ -588,11 +584,11 @@ export const getGetLeaderboardQueryOptions = <
 }) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getGetLeaderboardQueryKey(params);
+  const queryKey = queryOptions?.queryKey ?? getGetLeaderboardQueryKey();
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getLeaderboard>>> = ({
     signal,
-  }) => getLeaderboard(params, { signal, ...requestOptions });
+  }) => getLeaderboard({ signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getLeaderboard>>,
@@ -613,7 +609,7 @@ export type GetLeaderboardQueryError = ErrorType<unknown>;
 export function useGetLeaderboard<
   TData = Awaited<ReturnType<typeof getLeaderboard>>,
   TError = ErrorType<unknown>,
->(params?: { quizLevel?: string; quizSubject?: string }, options?: {
+>(options?: {
   query?: UseQueryOptions<
     Awaited<ReturnType<typeof getLeaderboard>>,
     TError,
@@ -621,7 +617,7 @@ export function useGetLeaderboard<
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-  const queryOptions = getGetLeaderboardQueryOptions(params, options);
+  const queryOptions = getGetLeaderboardQueryOptions(options);
 
   const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
     queryKey: QueryKey;
@@ -1971,7 +1967,7 @@ export const useDeleteSchedule = <
 };
 
 /**
- * @summary Skip a schedule on a specific date (add to deletedDates)
+ * @summary Skip a single occurrence of a schedule
  */
 export const getSkipScheduleDateUrl = (id: number) => {
   return `/api/schedules/${id}/skip-date`;
@@ -1979,13 +1975,13 @@ export const getSkipScheduleDateUrl = (id: number) => {
 
 export const skipScheduleDate = async (
   id: number,
-  skipScheduleDateBody: { date: string },
+  skipScheduleDateBody: SkipScheduleDateBody,
   options?: RequestInit,
 ): Promise<Schedule> => {
   return customFetch<Schedule>(getSkipScheduleDateUrl(id), {
     ...options,
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", ...options?.headers },
     body: JSON.stringify(skipScheduleDateBody),
   });
 };
@@ -1997,33 +1993,46 @@ export const getSkipScheduleDateMutationOptions = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof skipScheduleDate>>,
     TError,
-    { id: number; date: string },
+    { id: number; data: BodyType<SkipScheduleDateBody> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof skipScheduleDate>>,
   TError,
-  { id: number; date: string },
+  { id: number; data: BodyType<SkipScheduleDateBody> },
   TContext
 > => {
-  const { mutation: mutationOptions } = options ?? {};
   const mutationKey = ["skipScheduleDate"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof skipScheduleDate>>,
-    { id: number; date: string }
-  > = ({ id, date }) => {
-    return skipScheduleDate(id, { date });
+    { id: number; data: BodyType<SkipScheduleDateBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return skipScheduleDate(id, data, requestOptions);
   };
 
-  return { mutationKey, mutationFn, ...mutationOptions };
+  return { mutationFn, ...mutationOptions };
 };
 
 export type SkipScheduleDateMutationResult = NonNullable<
   Awaited<ReturnType<typeof skipScheduleDate>>
 >;
+export type SkipScheduleDateMutationBody = BodyType<SkipScheduleDateBody>;
 export type SkipScheduleDateMutationError = ErrorType<unknown>;
 
+/**
+ * @summary Skip a single occurrence of a schedule
+ */
 export const useSkipScheduleDate = <
   TError = ErrorType<unknown>,
   TContext = unknown,
@@ -2031,14 +2040,14 @@ export const useSkipScheduleDate = <
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof skipScheduleDate>>,
     TError,
-    { id: number; date: string },
+    { id: number; data: BodyType<SkipScheduleDateBody> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
   Awaited<ReturnType<typeof skipScheduleDate>>,
   TError,
-  { id: number; date: string },
+  { id: number; data: BodyType<SkipScheduleDateBody> },
   TContext
 > => {
   return useMutation(getSkipScheduleDateMutationOptions(options));

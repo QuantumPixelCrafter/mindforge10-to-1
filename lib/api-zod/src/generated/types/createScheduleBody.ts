@@ -17,7 +17,8 @@ export interface CreateScheduleBody {
   endTime: string;
   color: string;
   notificationEnabled: boolean;
-  eventType?: string | null;
-  startDate?: string | null;
-  endDate?: string | null;
+  eventType?: string;
+  startDate?: string;
+  endDate?: string;
+  isDateRange?: boolean;
 }

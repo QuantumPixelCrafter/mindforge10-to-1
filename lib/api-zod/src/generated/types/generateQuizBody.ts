@@ -14,5 +14,4 @@ export interface GenerateQuizBody {
    * @maximum 20
    */
   questionCount?: number;
-  level?: string;
 }
